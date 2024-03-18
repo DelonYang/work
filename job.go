@@ -154,7 +154,7 @@ func (j *Job) initQueueMap() {
 	j.isQueueMapInit = true
 	topicMap := make(map[string]bool)
 
-	for topic, _ := range j.workers {
+	for topic := range j.workers {
 		topicMap[topic] = true
 	}
 	j.println(Debug, "topicMap", topicMap)
@@ -414,6 +414,17 @@ func (j *Job) processTask(topic string, task Task) TaskResult {
 		_, err := j.GetQueueByTopic(topic).AckMsg(j.ctx, realTopic, task.Token, extraParams...)
 		if err != nil {
 			j.logAndPrintln(Error, "ack_error", topic, task)
+		}
+	}
+
+	//任务重新入队
+	if w, ok := j.workers[topic]; ok {
+		if !isAck && w.AutoRetryMaxNum > 0 && task.AutoRetryNum < w.AutoRetryMaxNum {
+			task.AutoRetryNum++
+			_, err := j.EnqueueWithTask(j.ctx, topic, task)
+			if err != nil {
+				j.logAndPrintln(Error, "requeue_error", topic, task)
+			}
 		}
 	}
 

@@ -7,7 +7,7 @@ import (
 const (
 	//成功，默认会触发ack
 	StateSucceed = iota
-	//失败，默认不会触发ack 说明：没有触发ack，如果queue服务支持，会进行消息重放
+	// 失败，在设置了AutoRetryNum的情况下会自动重试，不会触发ack
 	StateFailed
 	//失败，会触发ack
 	StateFailedWithAck
@@ -20,6 +20,7 @@ type Task struct {
 	Topic        string `json:"topic"`
 	Message      string `json:"message"`
 	Tag          string `json:"tag"`
+	AutoRetryNum int    `json:"auto_retry_num"`
 	Token        string
 	DequeueCount int64
 }

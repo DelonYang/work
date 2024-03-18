@@ -1,9 +1,10 @@
 package work
 
 type Worker struct {
-	Call           WorkerFunc
-	MaxConcurrency int
-	ExtraParam     []interface{} // 为了一些特殊驱动需要参数
+	Call            WorkerFunc
+	MaxConcurrency  int
+	AutoRetryMaxNum int
+	ExtraParam      []interface{} // 为了一些特殊驱动需要参数
 }
 
 type WorkerFunc interface {

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/qit-team/work"
 	"time"
+
+	"github.com/qit-team/work"
+	"github.com/qit-team/work/example"
 )
 
 func main() {
@@ -38,7 +40,7 @@ func RegisterWorker(job *work.Job) {
 	//设置worker的任务投递回调函数，和并发数
 	job.AddFunc("topic:test1", test, 2)
 	//使用worker结构进行注册
-	job.AddWorker("topic:test2", &work.Worker{Call: work.MyWorkerFunc(test), MaxConcurrency: 1})
+	job.AddWorker("topic:test2", &work.Worker{Call: work.MyWorkerFunc(test), MaxConcurrency: 1, AutoRetryMaxNum: 3})
 }
 
 /**
@@ -46,9 +48,9 @@ func RegisterWorker(job *work.Job) {
  */
 func RegisterQueueDriver(job *work.Job) {
 	//针对topic设置相关的queue,需要实现work.Queue接口的方法
-	job.AddQueue(&LocalQueue{}, "topic:test1", "topic:test2")
+	job.AddQueue(&example.LocalQueue{}, "topic:test1", "topic:test2")
 	//设置默认的queue, 没有设置过的topic会使用默认的queue
-	job.AddQueue(&LocalQueue{})
+	job.AddQueue(&example.LocalQueue{})
 }
 
 /**
@@ -56,7 +58,7 @@ func RegisterQueueDriver(job *work.Job) {
  */
 func SetOptions(job *work.Job) {
 	//设置logger，需要实现work.Logger接口的方法
-	job.SetLogger(&MyLogger{})
+	job.SetLogger(&example.MyLogger{})
 	//设置logger日志等级，默认work.Info
 	job.SetLevel(work.Warn)
 	//设置console输出等级,默认work.Warn
@@ -80,7 +82,7 @@ func test(task work.Task) work.TaskResult {
 		//work.StateFailed 不会进行ack确认
 		//work.StateFailedWithAck 会进行act确认
 		//return work.TaskResult{Id: task.Id, State: work.StateFailed}
-		return work.TaskResult{Id: task.Id, State: work.StateFailedWithAck}
+		return work.TaskResult{Id: task.Id, State: work.StateFailed}
 	} else {
 		//work.StateSucceed 会进行ack确认
 		fmt.Println("do task", s)

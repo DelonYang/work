@@ -3,32 +3,24 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/qit-team/work"
 	"strconv"
-	"sync"
 	"time"
-)
 
-var (
-	queues map[string][]string
-	lock   sync.RWMutex
+	"github.com/qit-team/work"
+	"github.com/qit-team/work/example"
 )
-
-func init() {
-	queues = make(map[string][]string)
-}
 
 func main() {
 	stop := make(chan int, 0)
 
 	testJobFeature()
-	q := new(LocalQueue)
-	q2 := new(LocalQueue)
+	q := new(example.LocalQueue)
+	q2 := new(example.LocalQueue)
 
 	job := work.New()
 	job.AddQueue(q)
 	job.AddQueue(q2, "kxy1")
-	job.SetLogger(new(MyLogger))
+	job.SetLogger(new(example.MyLogger))
 	job.SetConsoleLevel(work.Info)
 	job.SetEnableTopics("kxy1", "hts2")
 	//task任务panic的回调函数
@@ -45,9 +37,9 @@ func main() {
 	<-stop
 }
 
-//测试job新的轮训策略
+// 测试job新的轮训策略
 func testJobFeature() {
-	q := new(LocalQueue)
+	q := new(example.LocalQueue)
 	job := work.New()
 	go addData(job)
 	job.AddQueue(q)
@@ -61,7 +53,7 @@ func addData(job *work.Job) {
 	pushQueueData(job, "kxy1", 1, 1)
 }
 
-//压测
+// 压测
 func bench(job *work.Job) {
 	RegisterWorkerBench(job)
 	// 验证参数透传
@@ -73,7 +65,7 @@ func bench(job *work.Job) {
 	go jobStats(job)
 }
 
-//验证平滑关闭
+// 验证平滑关闭
 func termStop(job *work.Job) {
 	RegisterWorker2(job)
 	//预先生成数据到本地内存队列
@@ -96,8 +88,8 @@ func termStop(job *work.Job) {
 	//统计数据，查看是否有漏处理的任务
 	stat := job.Stats()
 	fmt.Println(stat)
-	count := len(queues["hts1"]) + len(queues["hts2"]) + len(queues["kxy1"])
-	fmt.Println("remain count:", count)
+	// count := len(queues["hts1"]) + len(queues["hts2"]) + len(queues["kxy1"])
+	// fmt.Println("remain count:", count)
 }
 
 func pushQueueData(job *work.Job, topic string, args ...int) {
@@ -179,88 +171,4 @@ func Me(task work.Task) work.TaskResult {
 	s, _ := work.JsonEncode(task)
 	fmt.Println("do task", s)
 	return work.TaskResult{Id: task.Id}
-}
-
-type LocalQueue struct{}
-
-func (q *LocalQueue) Enqueue(ctx context.Context, key string, message string, args ...interface{}) (ok bool, err error) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if _, ok = queues[key]; !ok {
-		queues[key] = make([]string, 0)
-	}
-
-	queues[key] = append(queues[key], message)
-	return true, nil
-}
-
-func (q *LocalQueue) BatchEnqueue(ctx context.Context, key string, messages []string, args ...interface{}) (ok bool, err error) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if _, ok = queues[key]; !ok {
-		queues[key] = make([]string, 0)
-	}
-
-	queues[key] = append(queues[key], messages...)
-	return true, nil
-}
-
-func (q *LocalQueue) Dequeue(ctx context.Context, key string, args ...interface{}) (message string, tag string, token string, dequeueCount int64, err error) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if len(queues[key]) > 0 {
-		message = queues[key][0]
-		queues[key] = queues[key][1:]
-	}
-
-	return
-}
-
-func (q *LocalQueue) AckMsg(ctx context.Context, key string, token string, args ...interface{}) (bool, error) {
-	return true, nil
-}
-
-type MyLogger struct{}
-
-func (logger *MyLogger) Trace(v ...interface{}) {
-
-}
-
-func (logger *MyLogger) Tracef(format string, args ...interface{}) {
-
-}
-
-func (logger *MyLogger) Debug(v ...interface{}) {
-
-}
-
-func (logger *MyLogger) Debugf(format string, args ...interface{}) {
-
-}
-
-func (logger *MyLogger) Info(v ...interface{}) {
-
-}
-
-func (logger *MyLogger) Infof(format string, args ...interface{}) {
-
-}
-
-func (logger *MyLogger) Warn(v ...interface{}) {
-
-}
-
-func (logger *MyLogger) Warnf(format string, args ...interface{}) {
-
-}
-
-func (logger *MyLogger) Error(v ...interface{}) {
-
-}
-
-func (logger *MyLogger) Errorf(format string, args ...interface{}) {
-
 }
